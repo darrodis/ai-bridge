@@ -21,4 +21,11 @@ export const importPlatform = async (root: string, platform: Platform): Promise<
     if (await exists(source)) await writeText(join(root, ".ai", "skills", name, "SKILL.md"), stripMarker(await readText(source)));
   }
   for (const file of await listFiles(agentsPath, ".md")) await writeText(join(root, ".ai", "agents", file.replace(/\.md$/, ""), "prompt.md"), stripMarker(await readText(join(agentsPath, file))));
+  if (platform === "claude") {
+    const mcpPath = join(root, ".mcp.json");
+    if (await exists(mcpPath)) {
+      const parsed = JSON.parse(await readText(mcpPath)) as { mcpServers?: Record<string, unknown> };
+      for (const [name, config] of Object.entries(parsed.mcpServers ?? {})) await writeText(join(root, ".ai", "mcp", name, "config.json"), `${JSON.stringify(config, null, 2)}\n`);
+    }
+  }
 };

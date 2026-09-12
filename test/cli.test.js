@@ -48,3 +48,14 @@ test("setup renders MCP env as TOML", async () => {
     assert.match(output, /env = \{ API_KEY = "\$\{API_KEY\}" \}/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test("setup imports Claude project MCP", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ai-bridge-"));
+  try {
+    await mkdir(join(root, ".claude"), { recursive: true });
+    await writeFile(join(root, ".mcp.json"), JSON.stringify({ mcpServers: { docs: { command: "npx", args: ["-y", "docs-mcp"] } } }));
+    const result = await run(root, "setup");
+    assert.equal(result.code, 0, result.stderr);
+    assert.deepEqual(JSON.parse(await readFile(join(root, ".ai", "mcp", "docs", "config.json"), "utf8")), { command: "npx", args: ["-y", "docs-mcp"] });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

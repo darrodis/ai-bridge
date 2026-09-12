@@ -35,3 +35,16 @@ test("setup imports a Claude rule", async () => {
     assert.equal(await readFile(join(root, ".ai", "rules", "style", "instruction.md"), "utf8"), "Be concise.\n");
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test("setup renders MCP env as TOML", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ai-bridge-"));
+  try {
+    await mkdir(join(root, ".ai", "mcp", "docs"), { recursive: true });
+    await writeFile(join(root, ".ai", "mcp", "docs", "config.json"), JSON.stringify({ command: "npx", args: ["-y", "docs-mcp"], env: { API_KEY: "${API_KEY}" } }));
+    const result = await run(root, "setup");
+    assert.equal(result.code, 0, result.stderr);
+    const output = await readFile(join(root, ".codex", "mcp.toml"), "utf8");
+    assert.match(output, /args = \["-y", "docs-mcp"\]/);
+    assert.match(output, /env = \{ API_KEY = "\$\{API_KEY\}" \}/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

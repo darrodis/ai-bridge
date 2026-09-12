@@ -4,6 +4,13 @@ import { exists, readText, writeText } from "./fs.js";
 
 const marker = "<!-- ai-bridge:generated file=v1 -->";
 const generated = (content: string): string => `${marker}\n${content.trim()}\n`;
+const tomlKey = (key: string): string => /^[A-Za-z0-9_-]+$/.test(key) ? key : JSON.stringify(key);
+const tomlValue = (value: unknown): string => {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(tomlValue).join(", ")}]`;
+  if (value && typeof value === "object") return `{ ${Object.entries(value).map(([key, item]) => `${tomlKey(key)} = ${tomlValue(item)}`).join(", ")} }`;
+  throw new Error("unsupported TOML value in MCP config");
+};
 
 export const render = async (model: CanonicalModel, force = false): Promise<string[]> => {
   const written: string[] = [];
@@ -35,7 +42,7 @@ export const render = async (model: CanonicalModel, force = false): Promise<stri
   if (await exists(mcpPath) && !force && (await readText(mcpPath)) !== mcpOutput) throw new Error("refusing to overwrite manual .mcp.json (use --force)");
   await writeText(mcpPath, mcpOutput);
   written.push(".mcp.json");
-  const codexMcp = model.mcpServers.map(({ name, config }) => `[mcp_servers.${name}]\n${Object.entries(config).map(([key, value]) => `${key} = ${JSON.stringify(value)}`).join("\n")}\n`).join("\n");
+  const codexMcp = model.mcpServers.map(({ name, config }) => `[mcp_servers.${tomlKey(name)}]\n${Object.entries(config).map(([key, value]) => `${tomlKey(key)} = ${tomlValue(value)}`).join("\n")}\n`).join("\n");
   const codexMcpPath = join(model.root, ".codex", "mcp.toml");
   const codexMcpOutput = `# ai-bridge generated; copy to a supported Codex project config if needed.\n${codexMcp}`;
   if (await exists(codexMcpPath) && !force && (await readText(codexMcpPath)) !== codexMcpOutput) throw new Error("refusing to overwrite manual .codex/mcp.toml (use --force)");

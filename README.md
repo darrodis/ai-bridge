@@ -230,7 +230,3 @@ npx --yes ai-bridge validate
 - Claude Code or Codex only to consume generated files, not to run the compiler.
 
 </details>
-
-## Status
-
-This repository contains the initial MVP. See [`docs/architecture.md`](docs/architecture.md), [`docs/future-features.md`](docs/future-features.md), and [`docs/session-handoff.md`](docs/session-handoff.md) for implementation boundaries and follow-up work.

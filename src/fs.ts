@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 
 export const exists = async (path: string): Promise<boolean> => {
@@ -22,6 +22,13 @@ export const listFiles = async (path: string, extension?: string): Promise<strin
 export const writeText = async (path: string, content: string): Promise<void> => {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, content, "utf8");
+};
+
+export const writeTextAtomic = async (path: string, content: string): Promise<void> => {
+  await mkdir(dirname(path), { recursive: true });
+  const temporary = `${path}.tmp-${process.pid}`;
+  await writeFile(temporary, content, "utf8");
+  await rename(temporary, path);
 };
 
 export const inside = (root: string, path: string): boolean => {

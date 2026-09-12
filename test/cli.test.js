@@ -59,3 +59,29 @@ test("setup imports Claude project MCP", async () => {
     assert.deepEqual(JSON.parse(await readFile(join(root, ".ai", "mcp", "docs", "config.json"), "utf8")), { command: "npx", args: ["-y", "docs-mcp"] });
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test("setup installs Claude and Codex reconcile hooks", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ai-bridge-"));
+  try {
+    const result = await run(root, "setup");
+    assert.equal(result.code, 0, result.stderr);
+    const claude = JSON.parse(await readFile(join(root, ".claude", "settings.json"), "utf8"));
+    assert.match(claude.hooks.Stop[0].hooks[0].command, /ai-bridge __reconcile/);
+    assert.match(await readFile(join(root, ".codex", "config.toml"), "utf8"), /\[\[hooks\.Stop\]\]/);
+    assert.equal((await run(root, "__reconcile")).code, 0);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("reconcile reports native drift without overwriting it", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ai-bridge-"));
+  try {
+    assert.equal((await run(root, "setup")).code, 0);
+    const path = join(root, "CLAUDE.md");
+    const original = await readFile(path, "utf8");
+    await writeFile(path, `${original}\nmanual change\n`);
+    const result = await run(root, "__reconcile");
+    assert.equal(result.code, 0);
+    assert.equal(await readFile(path, "utf8"), `${original}\nmanual change\n`);
+    assert.match(result.stderr, /drift detected/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

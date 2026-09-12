@@ -41,7 +41,8 @@ npx ai-bridge setup --from codex
 2. создаёт минимальный `.ai/`, если его нет;
 3. при одном источнике переносит rules, skills, agents и Claude project MCP в `.ai/`;
 4. генерирует `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json` и `.codex/mcp.toml`;
-5. запускает `validate` автоматически.
+5. устанавливает project-level Stop hooks Claude и Codex;
+6. запускает `validate` автоматически.
 
 ```sh
 npx ai-bridge setup
@@ -51,6 +52,8 @@ npx ai-bridge setup --force
 ```
 
 `--dry-run` не изменяет файлы. `--force` разрешает перезапись существующего неуправляемого файла. Если найдены несколько источников, команда остановится и попросит выбрать `--from`.
+
+После `setup` ИИ может менять `.ai/`: в конце его хода Stop hook автоматически запускает внутренний reconcile и обновляет generated-файлы. Если `.ai/` не менялся, reconcile ничего не делает. Ручное изменение generated-файла не затирается молча — инструмент сообщает о drift. Для отключения hooks используйте `--no-hooks`.
 
 ### `diff`
 
@@ -75,6 +78,7 @@ npx ai-bridge validate
 --from claude|codex    явный источник первичного импорта
 --dry-run              показать план без записи
 --force                разрешить перезапись неуправляемых файлов
+--no-hooks             не устанавливать project-level Stop hooks
 --version              показать версию
 ```
 
@@ -159,7 +163,10 @@ The single user-facing workflow. It discovers sources, creates `.ai/` when neede
 npx ai-bridge setup
 npx ai-bridge setup --dry-run
 npx ai-bridge setup --force
+npx ai-bridge setup --no-hooks
 ```
+
+After `setup`, project-level Stop hooks run an internal reconcile after an AI turn. They refresh generated files only when `.ai/` changed; native drift is reported instead of being silently overwritten. Use `--no-hooks` to opt out.
 
 ### `diff`
 
@@ -184,6 +191,7 @@ npx ai-bridge validate
 --from claude|codex    explicit import source
 --dry-run              preview without writing
 --force                allow overwriting unmanaged files
+--no-hooks             do not install project-level Stop hooks
 --version              print the version
 ```
 

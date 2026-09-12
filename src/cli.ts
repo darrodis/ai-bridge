@@ -7,6 +7,8 @@ import { exists, writeText } from "./fs.js";
 import { loadModel } from "./model.js";
 import { render } from "./render.js";
 import { validate } from "./validate.js";
+import { installHooks } from "./hooks.js";
+import { reconcile, saveState } from "./reconcile.js";
 import type { Platform } from "./types.js";
 
 const args = process.argv.slice(2);
@@ -15,6 +17,7 @@ const root = resolve(args.includes("--root") ? args[args.indexOf("--root") + 1] 
 const from = args.includes("--from") ? args[args.indexOf("--from") + 1] as Platform : undefined;
 const dryRun = args.includes("--dry-run");
 const force = args.includes("--force");
+const noHooks = args.includes("--no-hooks");
 
 const fail = (message: string): never => { console.error(pc.red(`✖ ${message}`)); process.exit(1); };
 const ensureSkeleton = async (): Promise<void> => {
@@ -24,7 +27,13 @@ const ensureSkeleton = async (): Promise<void> => {
 
 const main = async (): Promise<void> => {
   if (["--version", "-v"].includes(command)) { console.log("0.1.0"); return; }
-  if (command === "help" || command === "--help") { console.log("ai-bridge setup [--from claude|codex] [--dry-run]\nai-bridge diff\nai-bridge validate"); return; }
+  if (command === "help" || command === "--help") { console.log("ai-bridge setup [--from claude|codex] [--dry-run] [--no-hooks]\nai-bridge diff\nai-bridge validate"); return; }
+  if (command === "__reconcile") {
+    const result = await reconcile(root);
+    if (result === "drift") { console.error(pc.yellow("⚠ generated file drift detected; edit .ai/ and run ai-bridge setup")); return; }
+    if (result === "changed") console.log(pc.green("✓ generated files refreshed"));
+    return;
+  }
   if (!["setup", "diff", "validate"].includes(command)) fail(`unknown command: ${command}`);
   if (command === "validate") {
     const errors = await validate(await loadModel(root));
@@ -44,7 +53,9 @@ const main = async (): Promise<void> => {
   const model = await loadModel(root);
   if (command === "diff") { console.log(pc.dim("dry-run: generated files would be refreshed")); return; }
   if (dryRun) { console.log(pc.dim("dry-run: setup would refresh generated files")); return; }
-  await render(model, force || imported);
+  const written = await render(model, force || imported);
+  if (!noHooks) await installHooks(root);
+  await saveState(root, noHooks ? written : [...written, ".claude/settings.json", ".codex/config.toml"]);
   const errors = await validate(model);
   if (errors.length) fail(errors.join("\n"));
   console.log(pc.green(`✓ setup complete ${pc.dim(`(${model.rules.length} rules, ${model.skills.length} skills, ${model.agents.length} agents, ${model.mcpServers.length} MCP servers)`)}`));

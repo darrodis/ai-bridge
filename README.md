@@ -1,36 +1,84 @@
 # ai-bridge
 
-Единый источник AI-инфраструктуры проекта для Claude Code и Codex.
+<p align="center"><strong>One project AI source of truth for Claude Code and Codex.</strong></p>
 
-## Быстрый старт (RU)
+<details open>
+<summary>Русский</summary>
 
-Требуется Node.js 20+ (LTS). Установка:
+## Что это и зачем
+
+`ai-bridge` решает одну конкретную проблему: Claude Code и Codex используют разные native-файлы для правил, skills, агентов и MCP. Если поддерживать их вручную, конфигурации расходятся.
+
+Инструмент вводит третью сущность — канонический каталог `.ai/`. Пользователь и ИИ работают только с ним. `ai-bridge setup` один раз создаёт или находит `.ai/`, переносит однозначно найденную существующую конфигурацию, затем генерирует native-файлы Claude Code и Codex.
+
+После `setup` в проект добавляются `CLAUDE.md` и `AGENTS.md` с общей инструкцией для ИИ: изменять AI-инфраструктуру только в `.ai/`. Остальные файлы считаются производными.
+
+Глобальные настройки Claude и Codex в первой версии не изменяются.
+
+## Быстрый старт
+
+Требуется Node.js 20+ (LTS). Глобальная установка не нужна:
 
 ```sh
-npm install --global ai-bridge
 cd your-project
-ai-bridge setup
+npx ai-bridge setup
 ```
 
-Команда создаёт или использует `.ai/`, при однозначно найденном Claude/Codex layout переносит его в канон, генерирует native-файлы и запускает проверку. Если найдены несколько источников, используйте `--from claude` или `--from codex`. Для просмотра изменений есть `ai-bridge diff`, для проверки — `ai-bridge validate`.
-
-Редактируйте только `.ai/`. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/` и `.mcp.json` — производные файлы. `--force` нужен для перезаписи неуправляемого файла. В документации описано, как самостоятельно подключить `validate` к CI или pre-commit.
-
-## Quick start (EN)
-
-Requires Node.js 20+ (LTS). Install and run:
+Для существующей конфигурации, если одновременно найдены Claude и Codex, укажите источник:
 
 ```sh
-npm install --global ai-bridge
-cd your-project
-ai-bridge setup
+npx ai-bridge setup --from claude
+npx ai-bridge setup --from codex
 ```
 
-The command creates or reuses `.ai/`, imports an unambiguous Claude/Codex layout when present, renders native files, and validates the result. If multiple sources are found, pass `--from claude` or `--from codex`. Use `ai-bridge diff` to preview changes and `ai-bridge validate` to check a project.
+## Команды
 
-Edit `.ai/` only. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, and `.mcp.json` are generated outputs. Use `--force` to overwrite an unmanaged file. The docs explain how to connect `validate` to CI or pre-commit manually.
+### `setup`
 
-## Canonical layout
+Единая команда пользовательского сценария:
+
+1. обнаруживает `.ai/`, Claude- и Codex-файлы;
+2. создаёт минимальный `.ai/`, если его нет;
+3. при одном источнике переносит rules, skills, agents и Claude project MCP в `.ai/`;
+4. генерирует `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json` и `.codex/mcp.toml`;
+5. запускает `validate` автоматически.
+
+```sh
+npx ai-bridge setup
+npx ai-bridge setup --from claude
+npx ai-bridge setup --dry-run
+npx ai-bridge setup --force
+```
+
+`--dry-run` не изменяет файлы. `--force` разрешает перезапись существующего неуправляемого файла. Если найдены несколько источников, команда остановится и попросит выбрать `--from`.
+
+### `diff`
+
+Показывает, что generated outputs будут пересобраны, не изменяя проект:
+
+```sh
+npx ai-bridge diff
+```
+
+### `validate`
+
+Проверяет наличие `.ai/`, допустимые имена сущностей и generated markers в `CLAUDE.md` и `AGENTS.md`:
+
+```sh
+npx ai-bridge validate
+```
+
+### Общие опции
+
+```text
+--root <path>          рабочий каталог проекта
+--from claude|codex    явный источник первичного импорта
+--dry-run              показать план без записи
+--force                разрешить перезапись неуправляемых файлов
+--version              показать версию
+```
+
+## Каноническая структура
 
 ```text
 .ai/
@@ -41,4 +89,148 @@ Edit `.ai/` only. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, a
   memory/
 ```
 
-Global Claude/Codex settings are intentionally out of scope for v1; see [`docs/future-features.md`](docs/future-features.md).
+Редактируйте только `.ai/`. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json` и `.codex/mcp.toml` генерируются из него. Generated markers позволяют отличать управляемые файлы от ручных.
+
+## MCP
+
+MCP-серверы описываются в `.ai/mcp/<name>/config.json`. Для Claude создаётся project `.mcp.json`. Для Codex создаётся reviewable `.codex/mcp.toml`; глобальный `~/.codex/config.toml` инструмент не меняет.
+
+## Подключение `validate` к CI
+
+`ai-bridge` не добавляет CI-интеграцию автоматически. Пользователь сам решает, нужна ли проверка, и добавляет шаг в workflow проекта:
+
+```yaml
+- name: validate ai configuration
+  run: npx --yes ai-bridge validate
+```
+
+## Подключение `validate` к pre-commit
+
+Добавьте локальный hook проекта, который выполняет ту же команду:
+
+```sh
+npx --yes ai-bridge validate
+```
+
+Hook можно подключить любым выбранным менеджером (например, lefthook, Husky или простым `.git/hooks/pre-commit`). `ai-bridge` не устанавливает и не активирует hook за пользователя.
+
+## Требования
+
+- Node.js 20+ (LTS);
+- npm, pnpm или другой менеджер, способный запускать `npx`;
+- Claude Code или Codex — только для использования сгенерированных файлов, не для запуска компилятора.
+
+</details>
+
+<details>
+<summary>English</summary>
+
+## What it is
+
+`ai-bridge` keeps Claude Code and Codex project AI infrastructure in one canonical `.ai/` directory. Both tools have different native files for rules, skills, agents, and MCP; maintaining those files by hand creates drift.
+
+The user and the AI edit `.ai/`. `npx ai-bridge setup` creates or discovers it, imports one unambiguous existing Claude/Codex layout, renders native outputs, and validates them.
+
+The command adds project-level `CLAUDE.md` and `AGENTS.md` instructions telling the AI to update only `.ai/`. Native files are generated outputs. Global Claude and Codex settings are intentionally untouched in v1.
+
+## Quick start
+
+Requires Node.js 20+ (LTS). No global installation is needed:
+
+```sh
+cd your-project
+npx ai-bridge setup
+```
+
+If both Claude and Codex sources exist, choose one explicitly:
+
+```sh
+npx ai-bridge setup --from claude
+npx ai-bridge setup --from codex
+```
+
+## Commands
+
+### `setup`
+
+The single user-facing workflow. It discovers sources, creates `.ai/` when needed, imports an unambiguous source, renders Claude/Codex/MCP outputs, and runs `validate` at the end.
+
+```sh
+npx ai-bridge setup
+npx ai-bridge setup --dry-run
+npx ai-bridge setup --force
+```
+
+### `diff`
+
+Previews a generated refresh without changing files:
+
+```sh
+npx ai-bridge diff
+```
+
+### `validate`
+
+Checks the canonical directory, entity names, and generated markers:
+
+```sh
+npx ai-bridge validate
+```
+
+### Options
+
+```text
+--root <path>          project working directory
+--from claude|codex    explicit import source
+--dry-run              preview without writing
+--force                allow overwriting unmanaged files
+--version              print the version
+```
+
+## Canonical layout and ownership
+
+```text
+.ai/
+  rules/<name>/instruction.md
+  skills/<name>/SKILL.md
+  agents/<name>/prompt.md
+  mcp/<name>/config.json
+  memory/
+```
+
+Edit `.ai/` only. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json`, and `.codex/mcp.toml` are generated outputs.
+
+## MCP
+
+Define MCP servers in `.ai/mcp/<name>/config.json`. Claude receives project `.mcp.json`. Codex receives a reviewable `.codex/mcp.toml`; global `~/.codex/config.toml` is never changed.
+
+## Add `validate` to CI
+
+The tool does not modify CI automatically. Add this step to the project workflow if desired:
+
+```yaml
+- name: validate ai configuration
+  run: npx --yes ai-bridge validate
+```
+
+## Add `validate` to pre-commit
+
+Add the same command to the project hook managed by your preferred tool:
+
+```sh
+npx --yes ai-bridge validate
+```
+
+`ai-bridge` does not install or enable hooks automatically.
+
+## Requirements
+
+- Node.js 20+ (LTS);
+- npm, pnpm, or another package manager that can run `npx`;
+- Claude Code or Codex only to consume generated files, not to run the compiler.
+
+</details>
+
+## Status
+
+This repository contains the initial MVP. See [`docs/architecture.md`](docs/architecture.md), [`docs/future-features.md`](docs/future-features.md), and [`docs/session-handoff.md`](docs/session-handoff.md) for implementation boundaries and follow-up work.

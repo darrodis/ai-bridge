@@ -1,21 +1,30 @@
-name: Release
+name: Verify and Release
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-      - run: npm install
+          node-version: 22.14.0
+      - run: npm ci
       - run: npm test
-      - run: npm publish --provenance --access public
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

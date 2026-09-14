@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { exists, readText, writeTextAtomic } from "./fs.js";
 
 const codexMarker = "# ai-bridge:generated hooks=v1";
-const hookCommand = "if [ -x \"$PWD/node_modules/.bin/ai-bridge\" ]; then \"$PWD/node_modules/.bin/ai-bridge\" __reconcile --root \"$PWD\"; else npx --yes ai-bridge __reconcile --root \"$PWD\"; fi";
+const hookCommand = "if [ -x \"$PWD/node_modules/.bin/ai-bridge\" ]; then \"$PWD/node_modules/.bin/ai-bridge\" __reconcile --root \"$PWD\"; else npx --yes ai-bridge-tool __reconcile --root \"$PWD\"; fi";
 
 type JsonRecord = Record<string, unknown>;
 

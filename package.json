@@ -1,18 +1,40 @@
 {
-  "name": "ai-bridge",
+  "name": "ai-bridge-tool",
   "version": "0.1.0",
   "description": "One canonical AI project configuration for Claude Code and Codex",
   "type": "module",
-  "bin": { "ai-bridge": "dist/cli.js" },
-  "files": ["dist", "README.md", "LICENSE", "schemas"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/darrodis/ai-bridge.git"
+  },
+  "bin": {
+    "ai-bridge": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "schemas"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test",
     "check": "npm run build && npm test",
     "pack:check": "npm pack --dry-run"
   },
-  "dependencies": { "picocolors": "^1.1.1" },
-  "devDependencies": { "@types/node": "^22.0.0", "typescript": "^5.7.0" },
-  "engines": { "node": ">=20" },
+  "dependencies": {
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "semantic-release": "^25.0.9",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT"
 }

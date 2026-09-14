@@ -21,14 +21,14 @@
 
 ```sh
 cd your-project
-npx ai-bridge setup
+npx --yes ai-bridge-tool setup
 ```
 
 Для существующей конфигурации, если одновременно найдены Claude и Codex, укажите источник:
 
 ```sh
-npx ai-bridge setup --from claude
-npx ai-bridge setup --from codex
+npx --yes ai-bridge-tool setup --from claude
+npx --yes ai-bridge-tool setup --from codex
 ```
 
 ## Команды
@@ -45,10 +45,10 @@ npx ai-bridge setup --from codex
 6. запускает `validate` автоматически.
 
 ```sh
-npx ai-bridge setup
-npx ai-bridge setup --from claude
-npx ai-bridge setup --dry-run
-npx ai-bridge setup --force
+npx --yes ai-bridge-tool setup
+npx --yes ai-bridge-tool setup --from claude
+npx --yes ai-bridge-tool setup --dry-run
+npx --yes ai-bridge-tool setup --force
 ```
 
 `--dry-run` не изменяет файлы. `--force` разрешает перезапись существующего неуправляемого файла. Если найдены несколько источников, команда остановится и попросит выбрать `--from`.
@@ -60,7 +60,7 @@ npx ai-bridge setup --force
 Показывает, что generated outputs будут пересобраны, не изменяя проект:
 
 ```sh
-npx ai-bridge diff
+npx --yes ai-bridge-tool diff
 ```
 
 ### `validate`
@@ -68,7 +68,7 @@ npx ai-bridge diff
 Проверяет наличие `.ai/`, допустимые имена сущностей и generated markers в `CLAUDE.md` и `AGENTS.md`:
 
 ```sh
-npx ai-bridge validate
+npx --yes ai-bridge-tool validate
 ```
 
 ### Общие опции
@@ -105,7 +105,7 @@ MCP-серверы описываются в `.ai/mcp/<name>/config.json`. Дл�
 
 ```yaml
 - name: validate ai configuration
-  run: npx --yes ai-bridge validate
+  run: npx --yes ai-bridge-tool validate
 ```
 
 ## Подключение `validate` к pre-commit
@@ -113,7 +113,7 @@ MCP-серверы описываются в `.ai/mcp/<name>/config.json`. Дл�
 Добавьте локальный hook проекта, который выполняет ту же команду:
 
 ```sh
-npx --yes ai-bridge validate
+npx --yes ai-bridge-tool validate
 ```
 
 Hook можно подключить любым выбранным менеджером (например, lefthook, Husky или простым `.git/hooks/pre-commit`). `ai-bridge` не устанавливает и не активирует hook за пользователя.
@@ -133,7 +133,7 @@ Hook можно подключить любым выбранным менедж�
 
 `ai-bridge` keeps Claude Code and Codex project AI infrastructure in one canonical `.ai/` directory. Both tools have different native files for rules, skills, agents, and MCP; maintaining those files by hand creates drift.
 
-The user and the AI edit `.ai/`. `npx ai-bridge setup` creates or discovers it, imports one unambiguous existing Claude/Codex layout, renders native outputs, and validates them.
+The user and the AI edit `.ai/`. `npx --yes ai-bridge-tool setup` creates or discovers it, imports one unambiguous existing Claude/Codex layout, renders native outputs, and validates them.
 
 The command adds project-level `CLAUDE.md` and `AGENTS.md` instructions telling the AI to update only `.ai/`. Native files are generated outputs. Global Claude and Codex settings are intentionally untouched in v1.
 
@@ -143,14 +143,14 @@ Requires Node.js 20+ (LTS). No global installation is needed:
 
 ```sh
 cd your-project
-npx ai-bridge setup
+npx --yes ai-bridge-tool setup
 ```
 
 If both Claude and Codex sources exist, choose one explicitly:
 
 ```sh
-npx ai-bridge setup --from claude
-npx ai-bridge setup --from codex
+npx --yes ai-bridge-tool setup --from claude
+npx --yes ai-bridge-tool setup --from codex
 ```
 
 ## Commands
@@ -160,10 +160,10 @@ npx ai-bridge setup --from codex
 The single user-facing workflow. It discovers sources, creates `.ai/` when needed, imports an unambiguous source, renders Claude/Codex/MCP outputs, and runs `validate` at the end.
 
 ```sh
-npx ai-bridge setup
-npx ai-bridge setup --dry-run
-npx ai-bridge setup --force
-npx ai-bridge setup --no-hooks
+npx --yes ai-bridge-tool setup
+npx --yes ai-bridge-tool setup --dry-run
+npx --yes ai-bridge-tool setup --force
+npx --yes ai-bridge-tool setup --no-hooks
 ```
 
 After `setup`, project-level Stop hooks run an internal reconcile after an AI turn. They refresh generated files only when `.ai/` changed; native drift is reported instead of being silently overwritten. Use `--no-hooks` to opt out.
@@ -173,7 +173,7 @@ After `setup`, project-level Stop hooks run an internal reconcile after an AI tu
 Previews a generated refresh without changing files:
 
 ```sh
-npx ai-bridge diff
+npx --yes ai-bridge-tool diff
 ```
 
 ### `validate`
@@ -181,7 +181,7 @@ npx ai-bridge diff
 Checks the canonical directory, entity names, and generated markers:
 
 ```sh
-npx ai-bridge validate
+npx --yes ai-bridge-tool validate
 ```
 
 ### Options
@@ -218,7 +218,7 @@ The tool does not modify CI automatically. Add this step to the project workflow
 
 ```yaml
 - name: validate ai configuration
-  run: npx --yes ai-bridge validate
+  run: npx --yes ai-bridge-tool validate
 ```
 
 ## Add `validate` to pre-commit
@@ -226,10 +226,10 @@ The tool does not modify CI automatically. Add this step to the project workflow
 Add the same command to the project hook managed by your preferred tool:
 
 ```sh
-npx --yes ai-bridge validate
+npx --yes ai-bridge-tool validate
 ```
 
-`ai-bridge` does not install or enable hooks automatically.
+`ai-bridge` does not install or enable CI/pre-commit hooks automatically.
 
 ## Requirements
 

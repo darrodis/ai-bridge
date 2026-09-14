@@ -8,7 +8,7 @@ type JsonRecord = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is JsonRecord => Boolean(value && typeof value === "object" && !Array.isArray(value));
 
-const isAiBridgeCommand = (value: unknown): boolean => isRecord(value) && value.type === "command" && typeof value.command === "string" && value.command.includes("ai-bridge __reconcile");
+const isAiBridgeCommand = (value: unknown): boolean => isRecord(value) && value.type === "command" && typeof value.command === "string" && /ai-bridge(?:-tool)?\s+__reconcile/.test(value.command);
 
 const installClaudeHook = async (root: string): Promise<void> => {
   const path = join(root, ".claude", "settings.json");

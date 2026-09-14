@@ -68,6 +68,9 @@ test("setup installs Claude and Codex reconcile hooks", async () => {
     const claude = JSON.parse(await readFile(join(root, ".claude", "settings.json"), "utf8"));
     assert.match(claude.hooks.Stop[0].hooks[0].command, /ai-bridge-tool __reconcile/);
     assert.match(await readFile(join(root, ".codex", "config.toml"), "utf8"), /\[\[hooks\.Stop\]\]/);
+    assert.equal((await run(root, "setup")).code, 0);
+    const rerun = JSON.parse(await readFile(join(root, ".claude", "settings.json"), "utf8"));
+    assert.equal(rerun.hooks.Stop.flatMap((group) => group.hooks ?? []).filter((hook) => String(hook.command).includes("__reconcile")).length, 1);
     assert.equal((await run(root, "__reconcile")).code, 0);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

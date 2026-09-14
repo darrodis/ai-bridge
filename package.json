@@ -8,7 +8,8 @@
     "url": "git+https://github.com/darrodis/ai-bridge.git"
   },
   "bin": {
-    "ai-bridge": "dist/cli.js"
+    "ai-bridge": "dist/cli.js",
+    "ai-bridge-tool": "dist/cli.js"
   },
   "files": [
     "dist",

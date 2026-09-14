@@ -105,6 +105,12 @@ test("version comes from installed package metadata, not a build constant", asyn
   } finally { await cleanup(root); }
 });
 
+test("package exposes a bin matching its npm name", async () => {
+  const packageJson = JSON.parse(await readFile(join(process.cwd(), "package.json"), "utf8"));
+  assert.equal(packageJson.bin["ai-bridge"], "dist/cli.js");
+  assert.equal(packageJson.bin["ai-bridge-tool"], "dist/cli.js");
+});
+
 test("reconcile removes generated skills and agents without reinstalling hooks", async () => {
   const root = await temporary();
   try {

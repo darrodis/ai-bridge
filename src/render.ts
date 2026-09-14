@@ -1,6 +1,8 @@
 import { join } from "node:path";
+import { realpath, rm } from "node:fs/promises";
 import type { CanonicalModel } from "./types.js";
-import { exists, readText, writeTextAtomic } from "./fs.js";
+import { exists, inside, readText, writeTextAtomic } from "./fs.js";
+import { digest, hookPaths } from "./state.js";
 
 const marker = "<!-- ai-bridge:generated file=v1 -->";
 const generated = (content: string): string => `${marker}\n${content.trim()}\n`;
@@ -12,41 +14,53 @@ const tomlValue = (value: unknown): string => {
   throw new Error("unsupported TOML value in MCP config");
 };
 
-export const render = async (model: CanonicalModel, force = false): Promise<string[]> => {
-  const written: string[] = [];
-  const write = async (relative: string, content: string) => {
-    const path = join(model.root, relative);
-    const output = generated(content);
-    if (await exists(path) && !force && !(await readText(path)).startsWith(marker)) throw new Error(`refusing to overwrite manual file: ${relative} (use --force)`);
-    await writeTextAtomic(path, output);
-    written.push(relative);
-  };
+export const renderPlan = (model: CanonicalModel): Record<string, string> => {
   const index = "# AI project configuration\n\nEdit `.ai/` and run `ai-bridge setup`; generated platform files are not source files.\n";
-  await write("CLAUDE.md", index);
-  await write("AGENTS.md", index);
+  const instructions = generated(index) + (model.projectInstructions === undefined ? "" : `\n${model.projectInstructions}`);
+  const plan: Record<string, string> = { "CLAUDE.md": instructions, "AGENTS.md": instructions };
   for (const rule of model.rules) {
-    await write(join(".claude", "rules", `${rule.name}.md`), rule.instruction);
-    await write(join(".agents", "rules", `${rule.name}.md`), rule.instruction);
+    plan[join(".claude", "rules", `${rule.name}.md`)] = generated(rule.instruction);
+    plan[join(".agents", "rules", `${rule.name}.md`)] = generated(rule.instruction);
   }
   for (const skill of model.skills) {
-    await write(join(".claude", "skills", skill.name, "SKILL.md"), skill.content);
-    await write(join(".agents", "skills", skill.name, "SKILL.md"), skill.content);
+    plan[join(".claude", "skills", skill.name, "SKILL.md")] = generated(skill.content);
+    plan[join(".agents", "skills", skill.name, "SKILL.md")] = generated(skill.content);
   }
   for (const agent of model.agents) {
-    await write(join(".claude", "agents", `${agent.name}.md`), agent.prompt);
-    await write(join(".codex", "agents", `${agent.name}.md`), agent.prompt);
+    plan[join(".claude", "agents", `${agent.name}.md`)] = generated(agent.prompt);
+    plan[join(".codex", "agents", `${agent.name}.md`)] = generated(agent.prompt);
   }
   const claudeMcp = { mcpServers: Object.fromEntries(model.mcpServers.map(({ name, config }) => [name, config])) };
-  const mcpPath = join(model.root, ".mcp.json");
   const mcpOutput = `${JSON.stringify(claudeMcp, null, 2)}\n`;
-  if (await exists(mcpPath) && !force && (await readText(mcpPath)) !== mcpOutput) throw new Error("refusing to overwrite manual .mcp.json (use --force)");
-  await writeTextAtomic(mcpPath, mcpOutput);
-  written.push(".mcp.json");
+  plan[".mcp.json"] = mcpOutput;
   const codexMcp = model.mcpServers.map(({ name, config }) => `[mcp_servers.${tomlKey(name)}]\n${Object.entries(config).map(([key, value]) => `${tomlKey(key)} = ${tomlValue(value)}`).join("\n")}\n`).join("\n");
-  const codexMcpPath = join(model.root, ".codex", "mcp.toml");
   const codexMcpOutput = `# ai-bridge generated; copy to a supported Codex project config if needed.\n${codexMcp}`;
-  if (await exists(codexMcpPath) && !force && (await readText(codexMcpPath)) !== codexMcpOutput) throw new Error("refusing to overwrite manual .codex/mcp.toml (use --force)");
-  await writeTextAtomic(codexMcpPath, codexMcpOutput);
-  written.push(join(".codex", "mcp.toml"));
-  return written;
+  plan[join(".codex", "mcp.toml")] = codexMcpOutput;
+  return plan;
 };
+
+export const render = async (model: CanonicalModel, force = false, previousOutputs: Record<string, string> = {}): Promise<string[]> => {
+  const plan = renderPlan(model);
+  const removed: string[] = [];
+  for (const relative of Object.keys(previousOutputs)) {
+    if (relative in plan || hookPaths.includes(relative)) continue;
+    const path = join(model.root, relative);
+    if (!inside(model.root, path)) throw new Error(`invalid generated path: ${relative}`);
+    if (!(await exists(path))) continue;
+    if (!inside(await realpath(model.root), await realpath(path))) throw new Error(`generated path escapes project: ${relative}`);
+    if (!(await readText(path)).startsWith(marker)) throw new Error(`refusing to remove manual file: ${relative}`);
+    removed.push(path);
+  }
+  for (const [relative, output] of Object.entries(plan)) {
+    const path = join(model.root, relative);
+    if (!(await exists(path)) || force) continue;
+    const current = await readText(path);
+    const marked = current.startsWith(marker) || current.startsWith("# ai-bridge generated;");
+    if (!marked && current !== output && digest(current) !== previousOutputs[relative]) throw new Error(`refusing to overwrite manual file: ${relative} (use --force)`);
+  }
+  for (const [relative, output] of Object.entries(plan)) await writeTextAtomic(join(model.root, relative), output);
+  for (const path of removed) await rm(path);
+  return Object.keys(plan);
+};
+
+export { marker };

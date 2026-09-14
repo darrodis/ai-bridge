@@ -22,6 +22,7 @@ export interface McpServer {
 
 export interface CanonicalModel {
   root: string;
+  projectInstructions?: string;
   rules: Rule[];
   skills: Skill[];
   agents: Agent[];

@@ -1,8 +1,10 @@
 import { join } from "node:path";
-import { exists, listDirectories, listFiles, readText } from "./fs.js";
+import { exists, listDirectories, readText } from "./fs.js";
 import type { Agent, CanonicalModel, McpServer, Rule, Skill } from "./types.js";
 
 export const loadModel = async (root: string): Promise<CanonicalModel> => {
+  const instructionsPath = join(root, ".ai", "instructions", "project.md");
+  const projectInstructions = await exists(instructionsPath) ? await readText(instructionsPath) : undefined;
   const rules: Rule[] = [];
   for (const name of await listDirectories(join(root, ".ai", "rules"))) {
     const path = join(root, ".ai", "rules", name, "instruction.md");
@@ -23,5 +25,5 @@ export const loadModel = async (root: string): Promise<CanonicalModel> => {
     const path = join(root, ".ai", "mcp", name, "config.json");
     if (await exists(path)) mcpServers.push({ name, config: JSON.parse(await readText(path)) as Record<string, unknown> });
   }
-  return { root, rules, skills, agents, mcpServers };
+  return { root, projectInstructions, rules, skills, agents, mcpServers };
 };

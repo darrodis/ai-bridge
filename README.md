@@ -39,7 +39,7 @@ npx --yes ai-bridge-tool setup --from codex
 
 1. обнаруживает `.ai/`, Claude- и Codex-файлы;
 2. создаёт минимальный `.ai/`, если его нет;
-3. при одном источнике переносит rules, skills, agents и Claude project MCP в `.ai/`;
+3. при одном источнике переносит rules, skills, agents, project instructions и Claude project MCP в `.ai/`;
 4. генерирует `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json` и `.codex/mcp.toml`;
 5. устанавливает project-level Stop hooks Claude и Codex;
 6. запускает `validate` автоматически.
@@ -53,11 +53,13 @@ npx --yes ai-bridge-tool setup --force
 
 `--dry-run` не изменяет файлы. `--force` разрешает перезапись существующего неуправляемого файла. Если найдены несколько источников, команда остановится и попросит выбрать `--from`.
 
+Существующий корневой `CLAUDE.md` или `AGENTS.md` при первом импорте сохраняется в `.ai/instructions/project.md`, а затем включается в оба сгенерированных файла. После этого редактируйте только `.ai/instructions/project.md`.
+
 После `setup` ИИ может менять `.ai/`: в конце его хода Stop hook автоматически запускает внутренний reconcile и обновляет generated-файлы. Если `.ai/` не менялся, reconcile ничего не делает. Ручное изменение generated-файла не затирается молча — инструмент сообщает о drift. Для отключения hooks используйте `--no-hooks`.
 
 ### `diff`
 
-Показывает, что generated outputs будут пересобраны, не изменяя проект:
+Показывает, что generated outputs будут пересобраны, не изменяя проект. Если `.ai/` ещё нет, только сообщает, какой источник был бы импортирован:
 
 ```sh
 npx --yes ai-bridge-tool diff
@@ -65,7 +67,7 @@ npx --yes ai-bridge-tool diff
 
 ### `validate`
 
-Проверяет наличие `.ai/`, допустимые имена сущностей и generated markers в `CLAUDE.md` и `AGENTS.md`:
+Проверяет наличие `.ai/`, допустимые имена сущностей, соответствие generated-файлов канону и устаревшие производные файлы:
 
 ```sh
 npx --yes ai-bridge-tool validate
@@ -86,6 +88,7 @@ npx --yes ai-bridge-tool validate
 
 ```text
 .ai/
+  instructions/project.md
   rules/<name>/instruction.md
   skills/<name>/SKILL.md
   agents/<name>/prompt.md
@@ -93,7 +96,7 @@ npx --yes ai-bridge-tool validate
   memory/
 ```
 
-Редактируйте только `.ai/`. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json` и `.codex/mcp.toml` генерируются из него. Generated markers позволяют отличать управляемые файлы от ручных.
+Редактируйте только `.ai/`. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json` и `.codex/mcp.toml` генерируются из него. Generated markers позволяют отличать управляемые файлы от ручных. Если удалить ресурс из `.ai/`, его управляемая производная будет удалена при следующем `setup`.
 
 ## MCP
 
@@ -157,7 +160,7 @@ npx --yes ai-bridge-tool setup --from codex
 
 ### `setup`
 
-The single user-facing workflow. It discovers sources, creates `.ai/` when needed, imports an unambiguous source, renders Claude/Codex/MCP outputs, and runs `validate` at the end.
+The single user-facing workflow. It discovers sources, creates `.ai/` when needed, imports an unambiguous source (including project instructions), renders Claude/Codex/MCP outputs, and runs `validate` at the end.
 
 ```sh
 npx --yes ai-bridge-tool setup
@@ -170,7 +173,7 @@ After `setup`, project-level Stop hooks run an internal reconcile after an AI tu
 
 ### `diff`
 
-Previews a generated refresh without changing files:
+Previews a generated refresh without changing files. If `.ai/` does not exist, it only reports which source would be imported:
 
 ```sh
 npx --yes ai-bridge-tool diff
@@ -178,7 +181,7 @@ npx --yes ai-bridge-tool diff
 
 ### `validate`
 
-Checks the canonical directory, entity names, and generated markers:
+Checks the canonical directory, entity names, generated content, drift, and orphaned outputs:
 
 ```sh
 npx --yes ai-bridge-tool validate
@@ -199,6 +202,7 @@ npx --yes ai-bridge-tool validate
 
 ```text
 .ai/
+  instructions/project.md
   rules/<name>/instruction.md
   skills/<name>/SKILL.md
   agents/<name>/prompt.md
@@ -206,7 +210,7 @@ npx --yes ai-bridge-tool validate
   memory/
 ```
 
-Edit `.ai/` only. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json`, and `.codex/mcp.toml` are generated outputs.
+Edit `.ai/` only. An existing root `CLAUDE.md` or `AGENTS.md` is imported into `.ai/instructions/project.md` on first setup and then rendered into both native instruction files. `CLAUDE.md`, `AGENTS.md`, `.claude/`, `.agents/`, `.codex/`, `.mcp.json`, and `.codex/mcp.toml` are generated outputs. Removing a canonical resource removes its managed generated outputs on the next `setup`.
 
 ## MCP
 
